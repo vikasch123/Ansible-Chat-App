@@ -1,0 +1,21 @@
+- name: Test database
+  hosts: db
+  become: true
+
+  roles:
+    - db
+
+- name: Test App
+  hosts: app
+  become: true
+
+  roles:
+    - app
+
+
+- name: Test Web 
+  hosts: web
+  become: true
+
+  roles:
+    - web 

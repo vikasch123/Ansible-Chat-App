@@ -1,0 +1,76 @@
+- name: Ensure that app group exists
+  ansible.builtin.group:
+    name: "{{ app_group }}"
+    state: present
+
+- name: Ensure that app user exists
+  ansible.builtin.user:
+    name: "{{ app_user }}"
+    state: present
+    create_home: false
+    system: true
+
+- name: Ensuring all the packages are installed and updated
+  ansible.builtin.apt:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - git
+    - python3
+    - python3-pip
+    - python3-venv
+
+- name: Creating the application directories
+  ansible.builtin.file:
+    path: "{{ app_base_dir }}"
+    state: directory
+    owner: "{{ app_user }}"
+    group: "{{ app_user }}"
+    mode: "0755"
+
+- name: Cloning the GitHub repository inside our application directory
+  ansible.builtin.git:
+    repo: "https://github.com/vikasch123/django-chat-app.git"
+    dest: "{{ app_base_dir }}/{{ app_name }}"
+    version: "main"
+    force: true
+
+- name: Creating the python virtual environment inside app directory
+  ansible.builtin.command:
+    cmd: python3 -m venv "{{ app_env_path }}"
+  args:
+    creates: "{{ app_env_path }}/bin/activate"
+
+- name: Install all dependencies inside venv
+  ansible.builtin.pip:
+    requirements: "{{ app_base_dir }}/{{ app_name }}/requirements.txt"
+    virtualenv: "{{ app_env_path }}"
+    virtualenv_python: python3
+
+- name: Run django migrations
+  command: "{{ app_env_path }}/bin/python manage.py migrate"
+  args:
+    chdir: "{{ app_base_dir }}/{{ app_name }}/fundoo"
+  environment:
+    DJANGO_SETTINGS_MODULE: "{{ python_module }}"
+    DB_NAME: "{{ db_name }}"
+    DB_USER: "{{ db_user }}"
+    DB_HOST: "{{ db_host }}"
+    DB_PASSWORD: "{{ db_password }}"
+    DB_PORT: "{{ db_port }}"
+  changed_when: false
+
+- name: Create systemd service file for Gunicorn
+  ansible.builtin.template:
+    src: app.gunicorn.j2
+    dest: /etc/systemd/system/gunicorn.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: reload systemd
+
+- name: Enable and start Gunicorn service
+  ansible.builtin.systemd:
+    name: gunicorn
+    state: started
+    enabled: true

@@ -1,0 +1,58 @@
+---
+- name: Ensuring that MySQL is installed
+  ansible.builtin.apt:
+    name: mysql-server
+    state: present
+
+- name: Installing the pymysql package
+  ansible.builtin.apt:
+    name: python3-pymysql
+    state: present
+
+- name: Ensuring MySQL service is running
+  ansible.builtin.service:
+    name: mysql
+    state: started
+    enabled: true
+
+- name: Securing the root password of the freshly created DB
+  community.mysql.mysql_user:
+    name: root
+    host: "{{ item }}"
+    password: "{{ db_password }}"
+    login_user: root 
+    login_password: "{{ db_password }}"
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+  with_items:
+    - localhost
+    - 127.0.0.1
+    - "::1"
+
+- name: Creating the database for django app
+  community.mysql.mysql_db:
+    name: "{{ db_name }}"
+    state: present
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+    login_user: root 
+    login_password: "{{ db_password }}"
+
+- name: Creating the django user in mysql
+  community.mysql.mysql_user:
+    name: "{{ db_user }}"
+    host: "%"
+    password: "{{ db_password }}"
+    priv: "{{ db_name }}.*:ALL"
+    state: present
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+    login_user: root
+    login_password: "{{ db_password }}"
+
+- name: Edit bind address to listen to all addresses
+  ansible.builtin.ini_file:
+    path: /etc/mysql/mysql.conf.d/mysqld.cnf
+    section: mysqld
+    option: bind-address
+    value: "0.0.0.0"
+    mode: "0644"
+  notify: restart mysql service
+

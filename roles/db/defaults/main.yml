@@ -1,0 +1,2 @@
+db_name: "django_chat_db"
+# app_subnet_cidr: "10.0.1.0/24

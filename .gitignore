@@ -1,0 +1,8 @@
+.ansible
+.vagrant
+.vscode 
+Vagrantfile
+*.log
+*.tmp
+*.bak
+

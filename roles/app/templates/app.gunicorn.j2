@@ -1,0 +1,21 @@
+[Unit]
+Description=Gunicorn instance to serve Fundoo Django project
+After=network.target
+
+[Service]
+User={{ app_user }}
+Group={{ app_group }}
+WorkingDirectory={{ app_base_dir }}/fundoo
+
+# Environment variables from group_vars
+Environment="DJANGO_SETTINGS_MODULE={{ python_module }}"
+Environment="DB_NAME={{ db_name }}"
+Environment="DB_USER={{ db_user }}"
+Environment="DB_HOST={{ db_host }}"
+Environment="DB_PASSWORD={{ db_password }}"
+Environment="DB_PORT={{ db_port }}"
+
+ExecStart={{ app_env_path }}/bin/gunicorn --workers {{ gunicorn_workers }} --bind {{ gunicorn_bind_address }}:{{ gunicorn_port }} fundoo.wsgi:application
+
+Restart=always
+RestartSec=10
